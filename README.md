@@ -56,50 +56,47 @@ SkillBridge AI is a platform for student onboarding, AI career guidance, skill p
 
 7. Open `http://localhost:3000`
 
-## Demo accounts
+## Sample Data
 
-- Recruiter: `recruiter@skillbridge.ai` / `Recruiter123!`
-- Recruiter: `arjun@skillbridge.ai` / `Recruiter123!`
-- Student: `maya@skillbridge.ai` / `Student123!`
-- Student: `ravi@skillbridge.ai` / `Student123!`
-- Student: `aisha@skillbridge.ai` / `Student123!`
+The seed script creates sample recruiter and student records for local development and demos.
+Public repository documentation intentionally does not list seeded login credentials. If you need demo access, generate your own local seed data or inspect the seed script in your local environment.
 
 ## Project tree
 
 ```text
 SkillBridge AI/
-├── backend/
-│   ├── scripts/
-│   │   └── seed.js
-│   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── utils/
-│   │   ├── app.js
-│   │   └── server.js
-│   ├── .env.example
-│   └── package.json
-├── frontend/
-│   ├── app/
-│   │   ├── auth/
-│   │   ├── dashboard/
-│   │   ├── compare/
-│   │   ├── interview/
-│   │   ├── onboarding/
-│   │   ├── recruiter/
-│   │   ├── tasks/
-│   │   ├── globals.css
-│   │   ├── layout.js
-│   │   └── page.js
-│   ├── components/
-│   ├── lib/
-│   ├── .env.local.example
-│   └── package.json
-└── README.md
+|-- backend/
+|   |-- scripts/
+|   |   `-- seed.js
+|   |-- src/
+|   |   |-- config/
+|   |   |-- controllers/
+|   |   |-- middleware/
+|   |   |-- models/
+|   |   |-- routes/
+|   |   |-- services/
+|   |   |-- utils/
+|   |   |-- app.js
+|   |   `-- server.js
+|   |-- .env.example
+|   `-- package.json
+|-- frontend/
+|   |-- app/
+|   |   |-- auth/
+|   |   |-- dashboard/
+|   |   |-- compare/
+|   |   |-- interview/
+|   |   |-- onboarding/
+|   |   |-- recruiter/
+|   |   |-- tasks/
+|   |   |-- globals.css
+|   |   |-- layout.js
+|   |   `-- page.js
+|   |-- components/
+|   |-- lib/
+|   |-- .env.local.example
+|   `-- package.json
+`-- README.md
 ```
 
 ## Folder roles
@@ -150,7 +147,29 @@ This recreates:
 - 2 sample job postings
 - 3 candidate-job fit scores
 
+## Deployment
+
+- Frontend: deploy `frontend/` to Vercel
+- Backend: deploy `backend/` to Render
+- Database: use MongoDB Atlas
+
+Required production environment variables:
+
+```env
+# Render
+MONGODB_URI=your-mongodb-atlas-uri
+JWT_SECRET=your-jwt-secret
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-5.4-mini
+CLIENT_URL=https://your-frontend.vercel.app
+
+# Vercel
+NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com/api
+```
+
 ## Notes
 
 - `OPENAI_API_KEY` is optional for local demos. If missing, roadmap and task evaluation fall back to deterministic mock responses.
 - The app keeps auth in local storage for MVP simplicity.
+- Do not commit real `.env` files, production secrets, or private test credentials.
+
