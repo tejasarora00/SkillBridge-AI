@@ -375,6 +375,7 @@ export function OnboardingClient() {
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resumeBusy, setResumeBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -422,7 +423,6 @@ export function OnboardingClient() {
       currentSkills: form.currentSkills,
       targetCareer: form.targetCareer,
       educationLevel: form.educationLevel,
-      uploadedResume: form.uploadedResume,
     };
 
     try {
@@ -468,6 +468,7 @@ export function OnboardingClient() {
     }
 
     try {
+      setResumeBusy(true);
       setMessage("");
       const payload = new FormData();
       payload.append("resumeFile", file);
@@ -477,14 +478,15 @@ export function OnboardingClient() {
         body: payload,
       });
 
-      setForm({
-        ...form,
+      setForm((currentForm) => ({
+        ...currentForm,
         uploadedResume: data.uploadedResume || null,
-      });
+      }));
       setMessage("Resume uploaded and saved.");
     } catch (error) {
       setMessage(error.message);
     } finally {
+      setResumeBusy(false);
       event.target.value = "";
     }
   }
@@ -660,12 +662,16 @@ export function OnboardingClient() {
             <input
               type="file"
               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              disabled={resumeBusy}
               onChange={handleResumeChange}
             />
             <span className="field-note">
               Upload a PDF or Word resume so recruiters can view or download it
               only after shortlisting you.
             </span>
+            {resumeBusy ? (
+              <span className="file-upload-note">Uploading and saving resume...</span>
+            ) : null}
             {form.uploadedResume?.fileName ? (
               <>
                 <span className="file-upload-note">
@@ -694,7 +700,10 @@ export function OnboardingClient() {
             <button
               className="button primary"
               disabled={
-                busy || !form.interests.length || !form.currentSkills.length
+                busy ||
+                resumeBusy ||
+                !form.interests.length ||
+                !form.currentSkills.length
               }
             >
               {busy ? "Saving..." : "Save profile"}

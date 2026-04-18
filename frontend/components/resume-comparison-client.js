@@ -64,6 +64,9 @@ export function ResumeComparisonClient() {
       });
 
       setResult(data);
+      if (data.uploadedResume?.fileName) {
+        setSavedResume(data.uploadedResume);
+      }
       setMessage("ATS resume check ready.");
     } catch (error) {
       setMessage(error.message);

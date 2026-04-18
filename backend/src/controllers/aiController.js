@@ -449,20 +449,25 @@ export async function compareResumeWithSkills(req, res) {
       await parser.destroy();
       resumeText = String(parsedPdf.text || '').trim();
 
-      if (profile) {
-        profile.uploadedResume = {
-          fileName: String(req.file.originalname || 'resume.pdf').trim(),
-          mimeType: String(req.file.mimetype || 'application/pdf').trim(),
-          dataBase64: req.file.buffer.toString('base64'),
-          extractedText: resumeText,
-          uploadedAt: new Date()
-        };
-        await profile.save();
-        uploadedResumeResponse = {
-          fileName: profile.uploadedResume.fileName,
-          uploadedAt: profile.uploadedResume.uploadedAt
-        };
-      }
+      const uploadedResume = {
+        fileName: String(req.file.originalname || 'resume.pdf').trim(),
+        mimeType: String(req.file.mimetype || 'application/pdf').trim(),
+        dataBase64: req.file.buffer.toString('base64'),
+        extractedText: resumeText,
+        uploadedAt: new Date()
+      };
+
+      profile = await StudentProfile.findOneAndUpdate(
+        { userId: req.user._id },
+        { uploadedResume },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      uploadedResumeResponse = {
+        fileName: profile.uploadedResume.fileName,
+        mimeType: profile.uploadedResume.mimeType,
+        uploadedAt: profile.uploadedResume.uploadedAt
+      };
     } catch {
       return res.status(400).json({ message: 'Unable to read that PDF. Please try another file or paste the text.' });
     }
@@ -499,6 +504,7 @@ export async function compareResumeWithSkills(req, res) {
 
     uploadedResumeResponse = {
       fileName: profile.uploadedResume.fileName || 'resume.pdf',
+      mimeType: profile.uploadedResume.mimeType || 'application/pdf',
       uploadedAt: profile.uploadedResume.uploadedAt || null
     };
   }
