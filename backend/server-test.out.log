@@ -1,0 +1,2 @@
+[dotenv@17.2.2] injecting env (5) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+SkillBridge API running on http://localhost:5052
