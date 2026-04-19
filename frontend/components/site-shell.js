@@ -274,7 +274,6 @@ export function SiteShell({
             ) : null}
           </nav>
         </header>
-
         <main>{children}</main>
       </div>
       <SiteFooter
