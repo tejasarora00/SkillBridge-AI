@@ -106,6 +106,22 @@ export function RecruiterClient() {
               }
             : current,
         );
+        if (data.aiFitSummary) {
+          setCandidates((current) =>
+            current.map((candidate) =>
+              candidate.id === selectedCandidate.id
+                ? { ...candidate, fitExplanation: data.aiFitSummary }
+                : candidate,
+            ),
+          );
+          setShortlistedCandidates((current) =>
+            current.map((candidate) =>
+              candidate.id === selectedCandidate.id
+                ? { ...candidate, fitExplanation: data.aiFitSummary }
+                : candidate,
+            ),
+          );
+        }
       } catch {
         // Keep the existing brief content if the AI-backed brief request fails.
       } finally {
@@ -484,7 +500,6 @@ export function RecruiterClient() {
                 >
                   {candidate.recruiterDecision}
                 </span>
-                <span className="badge subtle">{candidate.matchedRole}</span>
               </div>
               <div className="candidate-score-grid">
                 <article className="mini-metric">
@@ -591,10 +606,6 @@ export function RecruiterClient() {
               >
                 {selectedCandidate.recruiterDecision}
               </span>
-              <span className="badge subtle">
-                <Search size={14} />
-                {selectedCandidate.matchedRole}
-              </span>
               <span className="score-chip">
                 <CheckCircle2 size={14} />
                 {selectedCandidate.verifiedTaskScore}/100 verified
@@ -609,13 +620,6 @@ export function RecruiterClient() {
                     <span>
                       <strong>Target career:</strong>{" "}
                       {selectedCandidate.targetCareer || "Not specified"}
-                    </span>
-                  </p>
-                  <p>
-                    <CheckCircle2 size={15} />
-                    <span>
-                      <strong>Matched role:</strong>{" "}
-                      {selectedCandidate.matchedRole || "Not mapped yet"}
                     </span>
                   </p>
                 </div>
@@ -647,7 +651,7 @@ export function RecruiterClient() {
             </div>
             <article className="candidate-summary-card">
               <strong>Fit summary</strong>
-              <p>
+              <p className="fit-summary-copy">
                 {briefLoading
                   ? "Generating AI fit summary from the candidate's current skills..."
                   : selectedCandidate.fitExplanation}

@@ -1193,7 +1193,7 @@ ${JSON.stringify({ verifiedTaskScore: Math.max(0, Math.min(100, Number(verifiedT
 
   return {
     data: {
-      summary: trimText(payload?.summary || fallback.summary, 500)
+      summary: String(payload?.summary || fallback.summary || '').trim()
     },
     meta
   };

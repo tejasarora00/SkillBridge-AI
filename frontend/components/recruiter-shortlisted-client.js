@@ -76,6 +76,15 @@ export function RecruiterShortlistedClient() {
               }
             : current,
         );
+        if (data.aiFitSummary) {
+          setShortlistedCandidates((current) =>
+            current.map((candidate) =>
+              candidate.id === selectedCandidate.id
+                ? { ...candidate, fitExplanation: data.aiFitSummary }
+                : candidate,
+            ),
+          );
+        }
       } catch {
         // Keep the existing brief content if the AI-backed brief request fails.
       } finally {
@@ -347,13 +356,6 @@ export function RecruiterShortlistedClient() {
                       {selectedCandidate.targetCareer || "Not specified"}
                     </span>
                   </p>
-                  <p>
-                    <CheckCircle2 size={15} />
-                    <span>
-                      <strong>Matched role:</strong>{" "}
-                      {selectedCandidate.matchedRole || "Not mapped yet"}
-                    </span>
-                  </p>
                 </div>
               </article>
               <article className="candidate-summary-card">
@@ -437,7 +439,7 @@ export function RecruiterShortlistedClient() {
             </article>
             <article className="candidate-summary-card">
               <strong>Fit summary</strong>
-              <p>
+              <p className="fit-summary-copy">
                 {briefLoading
                   ? "Generating AI fit summary from the candidate's current skills..."
                   : selectedCandidate.fitExplanation}

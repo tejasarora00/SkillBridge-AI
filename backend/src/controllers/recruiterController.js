@@ -3,6 +3,8 @@ import { anonymizeCandidate } from '../utils/profile.js';
 import { calculateCandidateMatch } from '../services/matchService.js';
 import { generateRecruiterFitSummary } from '../services/aiService.js';
 
+const DEFAULT_REVIEW_JOB_TITLE = 'General Talent Review';
+
 async function getOrCreateRecruiterReviewJob(recruiterId) {
   let recruiterJob = await JobPosting.findOne({ recruiterId }).lean();
 
@@ -17,6 +19,21 @@ async function getOrCreateRecruiterReviewJob(recruiterId) {
   }
 
   return recruiterJob;
+}
+
+function resolveMatchedRoleTitle({ matchedJobTitle = '', targetCareer = '' } = {}) {
+  const safeMatchedJobTitle = String(matchedJobTitle || '').trim();
+  const safeTargetCareer = String(targetCareer || '').trim();
+
+  if (safeMatchedJobTitle && safeMatchedJobTitle !== DEFAULT_REVIEW_JOB_TITLE) {
+    return safeMatchedJobTitle;
+  }
+
+  if (safeTargetCareer) {
+    return safeTargetCareer;
+  }
+
+  return safeMatchedJobTitle || 'Not mapped yet';
 }
 
 async function buildRecruiterCandidateSnapshot(recruiterId, { minimumScore = 0, targetCareer = '' } = {}) {
@@ -60,6 +77,9 @@ async function buildRecruiterCandidateSnapshot(recruiterId, { minimumScore = 0, 
       const fallbackMatch = fallbackJob
         ? calculateCandidateMatch(profile, fallbackJob, topSubmission?.aiScore || profile.overallSkillScore || 0)
         : null;
+      const strongestMatchJobTitle = strongestMatch
+        ? jobPostings.find((job) => job._id.toString() === strongestMatch.jobPostingId.toString())?.title || ''
+        : '';
       const recruiterDecision =
         mostRecentDecisionMatch?.recruiterDecision || strongestMatch?.recruiterDecision || 'new';
       const revealIdentity = recruiterDecision === 'shortlisted';
@@ -85,9 +105,10 @@ async function buildRecruiterCandidateSnapshot(recruiterId, { minimumScore = 0, 
         fitScore: strongestMatch?.fitScore || fallbackMatch?.fitScore || 0,
         fitExplanation: strongestMatch?.explanation || fallbackMatch?.explanation || 'No fit score calculated yet.',
         recruiterDecision,
-        matchedRole: strongestMatch
-          ? jobPostings.find((job) => job._id.toString() === strongestMatch.jobPostingId.toString())?.title || 'Best fit role'
-          : fallbackJob?.title || 'Not mapped yet',
+        matchedRole: resolveMatchedRoleTitle({
+          matchedJobTitle: strongestMatchJobTitle || fallbackJob?.title || '',
+          targetCareer: profile.targetCareer
+        }),
         uploadedResume,
         fitScores: relatedMatches.map((match) => ({
           jobPostingId: match.jobPostingId.toString(),
@@ -158,9 +179,12 @@ export async function getCandidateBrief(req, res) {
 
   const relatedMatches = matches.filter((match) => recruiterJobIds.has(match.jobPostingId.toString()));
   const strongestMatch = [...relatedMatches].sort((a, b) => b.fitScore - a.fitScore)[0];
-  const matchedRole = strongestMatch
-    ? recruiterJobs.find((job) => job._id.toString() === strongestMatch.jobPostingId.toString())?.title || ''
-    : recruiterJobs[0]?.title || '';
+  const matchedRole = resolveMatchedRoleTitle({
+    matchedJobTitle: strongestMatch
+      ? recruiterJobs.find((job) => job._id.toString() === strongestMatch.jobPostingId.toString())?.title || ''
+      : recruiterJobs[0]?.title || '',
+    targetCareer: profile.targetCareer
+  });
   const verifiedTaskScore = submissions[0]?.aiScore || profile.overallSkillScore || 0;
   const fallbackSummary = strongestMatch?.explanation || '';
   const fitSummary = await generateRecruiterFitSummary({
