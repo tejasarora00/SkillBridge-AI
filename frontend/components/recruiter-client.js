@@ -53,7 +53,7 @@ export function RecruiterClient() {
   const [filters, setFilters] = useState({
     query: "",
     minimumScore: "",
-    sortBy: "fit-desc",
+    sortBy: "verified-desc",
   });
 
   useEffect(() => {
@@ -102,26 +102,9 @@ export function RecruiterClient() {
                   data.currentSkills || current.currentSkills || [],
                 targetCareer: data.targetCareer || current.targetCareer,
                 matchedRole: data.matchedRole || current.matchedRole,
-                fitExplanation: data.aiFitSummary || current.fitExplanation,
               }
             : current,
         );
-        if (data.aiFitSummary) {
-          setCandidates((current) =>
-            current.map((candidate) =>
-              candidate.id === selectedCandidate.id
-                ? { ...candidate, fitExplanation: data.aiFitSummary }
-                : candidate,
-            ),
-          );
-          setShortlistedCandidates((current) =>
-            current.map((candidate) =>
-              candidate.id === selectedCandidate.id
-                ? { ...candidate, fitExplanation: data.aiFitSummary }
-                : candidate,
-            ),
-          );
-        }
       } catch {
         // Keep the existing brief content if the AI-backed brief request fails.
       } finally {
@@ -241,8 +224,6 @@ export function RecruiterClient() {
 
     nextList.sort((left, right) => {
       switch (filters.sortBy) {
-        case "fit-asc":
-          return left.fitScore - right.fitScore;
         case "verified-desc":
           return right.verifiedTaskScore - left.verifiedTaskScore;
         case "verified-asc":
@@ -255,9 +236,8 @@ export function RecruiterClient() {
               right.studentName || right.alias || right.targetCareer || "",
             ),
           );
-        case "fit-desc":
         default:
-          return right.fitScore - left.fitScore;
+          return right.verifiedTaskScore - left.verifiedTaskScore;
       }
     });
 
@@ -277,7 +257,6 @@ export function RecruiterClient() {
       candidate.matchedRole,
       ...(candidate.topSkills || []),
       candidate.strengthsSummary,
-      candidate.fitExplanation,
     ]
       .join(" ")
       .toLowerCase()
@@ -330,7 +309,7 @@ export function RecruiterClient() {
         </div>
         <p>
           This hiring view keeps the focus on evidence. Candidates are
-          anonymous, ranked by verified task quality and job fit, and can be
+          anonymous, ranked by verified task quality, and can be
           shortlisted or discarded without identity-first bias.
         </p>
         <div className="recruiter-stats">
@@ -352,8 +331,8 @@ export function RecruiterClient() {
           <article className="proof-card">
             <strong>What recruiters see</strong>
             <p>
-              Target role, verified task score, top skills, strengths summary,
-              and fit score.
+              Target role, verified task score, top skills, and strengths
+              summary.
             </p>
           </article>
           <article className="proof-card">
@@ -437,8 +416,6 @@ export function RecruiterClient() {
                   setFilters({ ...filters, sortBy: event.target.value })
                 }
               >
-                <option value="fit-desc">Fit score: high to low</option>
-                <option value="fit-asc">Fit score: low to high</option>
                 <option value="verified-desc">
                   Verified score: high to low
                 </option>
@@ -464,7 +441,7 @@ export function RecruiterClient() {
               const nextFilters = {
                 query: "",
                 minimumScore: "",
-                sortBy: "fit-desc",
+                sortBy: "verified-desc",
               };
               setFilters(nextFilters);
               loadCandidates(nextFilters);
@@ -492,7 +469,10 @@ export function RecruiterClient() {
                   <span className="eyebrow">{candidate.alias}</span>
                   <h3>{candidate.targetCareer || "Emerging talent"}</h3>
                 </div>
-                <span className="score-chip">{candidate.fitScore}/100 fit</span>
+                <span className="score-chip">
+                  <CheckCircle2 size={14} />
+                  {candidate.verifiedTaskScore}/100 verified
+                </span>
               </div>
               <div className="candidate-meta">
                 <span
@@ -506,10 +486,6 @@ export function RecruiterClient() {
                   <span>Verified score</span>
                   <strong>{candidate.verifiedTaskScore}/100</strong>
                 </article>
-                <article className="mini-metric">
-                  <span>Fit score</span>
-                  <strong>{candidate.fitScore}/100</strong>
-                </article>
               </div>
               <article className="candidate-summary-card">
                 <strong>Strength summary</strong>
@@ -522,9 +498,6 @@ export function RecruiterClient() {
                   </span>
                 ))}
               </div>
-              <p className="muted recruiter-fit-copy">
-                {candidate.fitExplanation}
-              </p>
               <div className="candidate-actions">
                 <button
                   className="button secondary"
@@ -650,11 +623,11 @@ export function RecruiterClient() {
               </article>
             </div>
             <article className="candidate-summary-card">
-              <strong>Fit summary</strong>
+              <strong>Verified score</strong>
               <p className="fit-summary-copy">
                 {briefLoading
-                  ? "Generating AI fit summary from the candidate's current skills..."
-                  : selectedCandidate.fitExplanation}
+                  ? "Refreshing the candidate's latest verified results..."
+                  : `${selectedCandidate.verifiedTaskScore}/100 based on verified task submissions.`}
               </p>
             </article>
             {selectedCandidate.recruiterDecision === "shortlisted" ? (

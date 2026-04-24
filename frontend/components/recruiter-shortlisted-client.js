@@ -34,7 +34,6 @@ export function RecruiterShortlistedClient() {
   const [query, setQuery] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [emailCopyAlert, setEmailCopyAlert] = useState(false);
-  const [briefLoading, setBriefLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -58,7 +57,6 @@ export function RecruiterShortlistedClient() {
 
     async function loadCandidateBrief() {
       try {
-        setBriefLoading(true);
         const data = await authRequest(
           `/recruiter/candidates/${selectedCandidate.id}/brief`,
           token,
@@ -72,23 +70,11 @@ export function RecruiterShortlistedClient() {
                   data.currentSkills || current.currentSkills || [],
                 targetCareer: data.targetCareer || current.targetCareer,
                 matchedRole: data.matchedRole || current.matchedRole,
-                fitExplanation: data.aiFitSummary || current.fitExplanation,
               }
             : current,
         );
-        if (data.aiFitSummary) {
-          setShortlistedCandidates((current) =>
-            current.map((candidate) =>
-              candidate.id === selectedCandidate.id
-                ? { ...candidate, fitExplanation: data.aiFitSummary }
-                : candidate,
-            ),
-          );
-        }
       } catch {
         // Keep the existing brief content if the AI-backed brief request fails.
-      } finally {
-        setBriefLoading(false);
       }
     }
 
@@ -172,7 +158,6 @@ export function RecruiterShortlistedClient() {
         candidate.matchedRole,
         ...(candidate.topSkills || []),
         candidate.strengthsSummary,
-        candidate.fitExplanation,
       ]
         .join(" ")
         .toLowerCase()
@@ -268,7 +253,6 @@ export function RecruiterShortlistedClient() {
                     <th>Email</th>
                     <th>Target role</th>
                     <th>Verified</th>
-                    <th>Fit</th>
                     <th>Top skills</th>
                     <th>Actions</th>
                   </tr>
@@ -280,7 +264,6 @@ export function RecruiterShortlistedClient() {
                       <td>{candidate.studentEmail || "Unavailable"}</td>
                       <td>{candidate.targetCareer || "Emerging talent"}</td>
                       <td>{candidate.verifiedTaskScore}/100</td>
-                      <td>{candidate.fitScore}/100</td>
                       <td>
                         {(candidate.topSkills || []).slice(0, 3).join(", ") ||
                           "No skills yet"}
@@ -384,6 +367,14 @@ export function RecruiterShortlistedClient() {
               </article>
             </div>
             <article className="candidate-summary-card recruiter-contact-card">
+              <strong>Verified score</strong>
+              <p>
+                <CheckCircle2 size={15} />
+                &nbsp;
+                {selectedCandidate.verifiedTaskScore}/100
+              </p>
+            </article>
+            <article className="candidate-summary-card recruiter-contact-card">
               <strong>Student details</strong>
               <p>
                 <UserRound size={15} />
@@ -436,14 +427,6 @@ export function RecruiterShortlistedClient() {
                   <span className="inline-note">No resume uploaded</span>
                 )}
               </div>
-            </article>
-            <article className="candidate-summary-card">
-              <strong>Fit summary</strong>
-              <p className="fit-summary-copy">
-                {briefLoading
-                  ? "Generating AI fit summary from the candidate's current skills..."
-                  : selectedCandidate.fitExplanation}
-              </p>
             </article>
           </div>
         </div>
