@@ -170,6 +170,7 @@ const TARGET_CAREER_OPTIONS = [
   "Financial Analyst",
   "Accountant",
   "Chartered Accountant (CA)",
+  "Acturial Science",
   "Investment Analyst",
   "Banking Associate",
   "Sales Executive",
