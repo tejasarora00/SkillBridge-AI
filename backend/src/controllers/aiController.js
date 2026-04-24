@@ -18,6 +18,10 @@ import {
   listAllTaskPrompts,
   listTaskPrompts
 } from '../services/taskCatalogService.js';
+import {
+  invalidateAllRecruiterCandidateSnapshots,
+  invalidateRecruiterCandidateBriefsForStudent
+} from '../services/recruiterCacheService.js';
 
 const KNOWN_SKILLS = [
   'react',
@@ -427,6 +431,11 @@ export async function submitSkillTask(req, res) {
       })
     );
 
+    await Promise.all([
+      invalidateAllRecruiterCandidateSnapshots(),
+      invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+    ]);
+
     return res.json({ submission, aiStatus: evaluation.meta });
   } catch {
     return res.status(500).json({ message: 'Unable to evaluate skill task submission.' });
@@ -462,6 +471,11 @@ export async function compareResumeWithSkills(req, res) {
         { uploadedResume },
         { new: true, upsert: true, setDefaultsOnInsert: true }
       );
+
+      await Promise.all([
+        invalidateAllRecruiterCandidateSnapshots(),
+        invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+      ]);
 
       uploadedResumeResponse = {
         fileName: profile.uploadedResume.fileName,

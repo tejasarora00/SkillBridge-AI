@@ -7,6 +7,10 @@ import {
   User
 } from '../models/index.js';
 import { calculateProfileCompleteness } from '../utils/profile.js';
+import {
+  invalidateAllRecruiterCandidateSnapshots,
+  invalidateRecruiterCandidateBriefsForStudent
+} from '../services/recruiterCacheService.js';
 
 const NAME_PATTERN = /^[A-Za-z]+(?:[A-Za-z\s'.-]*[A-Za-z])?$/;
 const PHONE_PATTERN = /^\d{10}$/;
@@ -250,6 +254,11 @@ export async function saveStudentProfile(req, res) {
     { new: true, upsert: true }
   ).lean();
 
+  await Promise.all([
+    invalidateAllRecruiterCandidateSnapshots(),
+    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+  ]);
+
   return res.json({
     message: 'Student profile saved.',
     profile: {
@@ -287,6 +296,11 @@ export async function saveStudentResume(req, res) {
     { uploadedResume },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   ).lean();
+
+  await Promise.all([
+    invalidateAllRecruiterCandidateSnapshots(),
+    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+  ]);
 
   return res.json({
     message: 'Resume uploaded successfully.',

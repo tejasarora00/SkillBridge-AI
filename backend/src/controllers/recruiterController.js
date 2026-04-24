@@ -2,6 +2,13 @@ import { CandidateMatch, JobPosting, SkillTaskSubmission, StudentProfile } from 
 import { anonymizeCandidate } from '../utils/profile.js';
 import { calculateCandidateMatch } from '../services/matchService.js';
 import { generateRecruiterFitSummary } from '../services/aiService.js';
+import {
+  getCachedRecruiterCandidateBrief,
+  getCachedRecruiterCandidateSnapshot,
+  invalidateRecruiterCandidateSnapshotsForRecruiter,
+  setCachedRecruiterCandidateBrief,
+  setCachedRecruiterCandidateSnapshot
+} from '../services/recruiterCacheService.js';
 
 const DEFAULT_REVIEW_JOB_TITLE = 'General Talent Review';
 
@@ -148,17 +155,36 @@ export async function listCandidates(req, res) {
   const parsedMinimumScore = Number(req.query.minimumScore);
   const minimumScore = Number.isFinite(parsedMinimumScore) && parsedMinimumScore > 0 ? parsedMinimumScore : 0;
   const targetCareer = String(req.query.targetCareer || '').trim().toLowerCase();
+  const recruiterId = req.user._id.toString();
+
+  const cachedSnapshot = await getCachedRecruiterCandidateSnapshot(recruiterId, {
+    minimumScore,
+    targetCareer
+  });
+
+  if (cachedSnapshot) {
+    return res.json(cachedSnapshot);
+  }
 
   const snapshot = await buildRecruiterCandidateSnapshot(req.user._id, {
     minimumScore,
     targetCareer
   });
 
+  await setCachedRecruiterCandidateSnapshot(recruiterId, { minimumScore, targetCareer }, snapshot);
+
   return res.json(snapshot);
 }
 
 export async function getCandidateBrief(req, res) {
   const { studentProfileId } = req.params;
+  const recruiterId = req.user._id.toString();
+  const cachedBrief = await getCachedRecruiterCandidateBrief(recruiterId, studentProfileId);
+
+  if (cachedBrief) {
+    return res.json(cachedBrief);
+  }
+
   const profile = await StudentProfile.findById(studentProfileId).populate('userId', 'name email').lean();
 
   if (!profile) {
@@ -194,13 +220,17 @@ export async function getCandidateBrief(req, res) {
     fallbackSummary
   });
 
-  return res.json({
+  const brief = {
     currentSkills: profile.currentSkills || [],
     targetCareer: profile.targetCareer || '',
     matchedRole,
     aiFitSummary: fitSummary.data.summary,
     aiStatus: fitSummary.meta
-  });
+  };
+
+  await setCachedRecruiterCandidateBrief(recruiterId, studentProfileId, brief);
+
+  return res.json(brief);
 }
 
 export async function updateCandidateDecision(req, res) {
@@ -267,7 +297,10 @@ export async function updateCandidateDecision(req, res) {
   candidateMatch.recruiterDecision = decision;
   candidateMatch.decisionUpdatedAt = decisionUpdatedAt;
 
+  await invalidateRecruiterCandidateSnapshotsForRecruiter(req.user._id.toString());
+
   const snapshot = await buildRecruiterCandidateSnapshot(req.user._id);
+  await setCachedRecruiterCandidateSnapshot(req.user._id.toString(), {}, snapshot);
 
   return res.json({
     message: 'Candidate decision saved.',
