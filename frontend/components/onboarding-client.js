@@ -182,6 +182,7 @@ const TARGET_CAREER_OPTIONS = [
   "Teacher",
   "Professor",
   "Research Assistant",
+  "Researcher",
   "Scientist",
   "Lab Technician",
   "Doctor",
