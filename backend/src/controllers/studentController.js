@@ -11,6 +11,17 @@ import {
   invalidateAllRecruiterCandidateSnapshots,
   invalidateRecruiterCandidateBriefsForStudent
 } from '../services/recruiterCacheService.js';
+import {
+  getCachedStudentDashboard,
+  getCachedStudentExpertSessions,
+  getCachedStudentProfile,
+  invalidateStudentDashboardCache,
+  invalidateStudentExpertSessionsCache,
+  invalidateStudentReadCaches,
+  setCachedStudentDashboard,
+  setCachedStudentExpertSessions,
+  setCachedStudentProfile
+} from '../services/studentCacheService.js';
 
 const NAME_PATTERN = /^[A-Za-z]+(?:[A-Za-z\s'.-]*[A-Za-z])?$/;
 const PHONE_PATTERN = /^\d{10}$/;
@@ -206,17 +217,30 @@ function buildTodoCompletionSeries(todoItems) {
 }
 
 export async function getStudentProfile(req, res) {
-  const profile = await StudentProfile.findOne({ userId: req.user._id }).lean();
-  if (!profile) {
-    return res.json({ profile: null });
+  const studentUserId = req.user._id.toString();
+  const cachedProfile = await getCachedStudentProfile(studentUserId);
+
+  if (cachedProfile) {
+    return res.json(cachedProfile);
   }
 
-  return res.json({
+  const profile = await StudentProfile.findOne({ userId: req.user._id }).lean();
+  if (!profile) {
+    const emptyPayload = { profile: null };
+    await setCachedStudentProfile(studentUserId, emptyPayload);
+    return res.json(emptyPayload);
+  }
+
+  const payload = {
     profile: {
       ...profile,
       uploadedResume: sanitizeUploadedResume(profile.uploadedResume)
     }
-  });
+  };
+
+  await setCachedStudentProfile(studentUserId, payload);
+
+  return res.json(payload);
 }
 
 export async function saveStudentProfile(req, res) {
@@ -256,16 +280,21 @@ export async function saveStudentProfile(req, res) {
 
   await Promise.all([
     invalidateAllRecruiterCandidateSnapshots(),
-    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString()),
+    invalidateStudentReadCaches(req.user._id.toString())
   ]);
 
-  return res.json({
+  const responsePayload = {
     message: 'Student profile saved.',
     profile: {
       ...profile,
       uploadedResume: sanitizeUploadedResume(profile.uploadedResume)
     }
-  });
+  };
+
+  await setCachedStudentProfile(req.user._id.toString(), responsePayload);
+
+  return res.json(responsePayload);
 }
 
 export async function saveStudentResume(req, res) {
@@ -299,7 +328,8 @@ export async function saveStudentResume(req, res) {
 
   await Promise.all([
     invalidateAllRecruiterCandidateSnapshots(),
-    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+    invalidateRecruiterCandidateBriefsForStudent(profile._id.toString()),
+    invalidateStudentReadCaches(req.user._id.toString())
   ]);
 
   return res.json({
@@ -309,6 +339,13 @@ export async function saveStudentResume(req, res) {
 }
 
 export async function getStudentDashboard(req, res) {
+  const studentUserId = req.user._id.toString();
+  const cachedDashboard = await getCachedStudentDashboard(studentUserId);
+
+  if (cachedDashboard) {
+    return res.json(cachedDashboard);
+  }
+
   const profile = await StudentProfile.findOne({ userId: req.user._id }).lean();
 
   if (!profile) {
@@ -321,13 +358,17 @@ export async function getStudentDashboard(req, res) {
     TodoItem.find({ studentUserId: req.user._id }).sort({ dueDate: 1, createdAt: -1 }).lean()
   ]);
 
-  return res.json({
+  const payload = {
     profile,
     roadmap: latestRoadmap,
     taskSubmissions,
     todoItems: todoItems.map(serializeTodoItem),
     todoCompletionSeries: buildTodoCompletionSeries(todoItems)
-  });
+  };
+
+  await setCachedStudentDashboard(studentUserId, payload);
+
+  return res.json(payload);
 }
 
 export async function createTodoItem(req, res) {
@@ -357,6 +398,8 @@ export async function createTodoItem(req, res) {
     title,
     dueDate
   });
+
+  await invalidateStudentDashboardCache(req.user._id.toString());
 
   return res.status(201).json({
     message: 'Task added to your to-do list.',
@@ -399,6 +442,8 @@ export async function updateTodoItem(req, res) {
     return res.status(404).json({ message: 'Task not found.' });
   }
 
+  await invalidateStudentDashboardCache(req.user._id.toString());
+
   return res.json({
     message: 'Task updated.',
     todoItem: serializeTodoItem(todoItem)
@@ -416,6 +461,8 @@ export async function toggleTodoItem(req, res) {
   todoItem.completedAt = todoItem.isCompleted ? new Date() : null;
   await todoItem.save();
 
+  await invalidateStudentDashboardCache(req.user._id.toString());
+
   return res.json({
     message: todoItem.isCompleted ? 'Task marked complete.' : 'Task marked incomplete.',
     todoItem: serializeTodoItem(todoItem)
@@ -432,15 +479,24 @@ export async function deleteTodoItem(req, res) {
     return res.status(404).json({ message: 'Task not found.' });
   }
 
+  await invalidateStudentDashboardCache(req.user._id.toString());
+
   return res.json({ message: 'Task deleted.' });
 }
 
 export async function getStudentExpertSessionRequests(req, res) {
+  const studentUserId = req.user._id.toString();
+  const cachedRequests = await getCachedStudentExpertSessions(studentUserId);
+
+  if (cachedRequests) {
+    return res.json(cachedRequests);
+  }
+
   const requests = await ExpertSessionRequest.find({ studentUserId: req.user._id })
     .sort({ createdAt: -1 })
     .lean();
 
-  return res.json({
+  const payload = {
     requests: requests.map((request) => ({
       id: request._id.toString(),
       name: request.name,
@@ -453,7 +509,11 @@ export async function getStudentExpertSessionRequests(req, res) {
       status: request.status,
       createdAt: request.createdAt
     }))
-  });
+  };
+
+  await setCachedStudentExpertSessions(studentUserId, payload);
+
+  return res.json(payload);
 }
 
 export async function createExpertSessionRequest(req, res) {
@@ -530,6 +590,8 @@ export async function createExpertSessionRequest(req, res) {
     slotStart,
     slotEnd
   });
+
+  await invalidateStudentExpertSessionsCache(req.user._id.toString());
 
   return res.status(201).json({
     message: 'Expert session request created.',

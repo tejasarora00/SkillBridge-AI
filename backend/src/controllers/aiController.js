@@ -22,6 +22,7 @@ import {
   invalidateAllRecruiterCandidateSnapshots,
   invalidateRecruiterCandidateBriefsForStudent
 } from '../services/recruiterCacheService.js';
+import { invalidateStudentReadCaches } from '../services/studentCacheService.js';
 
 const KNOWN_SKILLS = [
   'react',
@@ -264,6 +265,8 @@ export async function createRoadmap(req, res) {
     profile.latestRoadmapMilestones = roadmap.milestones || [];
     await profile.save();
 
+    await invalidateStudentReadCaches(req.user._id.toString());
+
     return res.json({ roadmap, aiStatus: roadmapResult.meta });
   } catch (error) {
     console.error('Roadmap generation failed:', error.message);
@@ -365,6 +368,8 @@ export async function refineStudentRoadmap(req, res) {
     profile.latestRoadmapMilestones = updatedRoadmap.milestones || [];
     await profile.save();
 
+    await invalidateStudentReadCaches(req.user._id.toString());
+
     return res.json({
       roadmap: updatedRoadmap,
       assistantReply: refinement.data.assistantReply,
@@ -433,7 +438,8 @@ export async function submitSkillTask(req, res) {
 
     await Promise.all([
       invalidateAllRecruiterCandidateSnapshots(),
-      invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+      invalidateRecruiterCandidateBriefsForStudent(profile._id.toString()),
+      invalidateStudentReadCaches(req.user._id.toString())
     ]);
 
     return res.json({ submission, aiStatus: evaluation.meta });
@@ -474,7 +480,8 @@ export async function compareResumeWithSkills(req, res) {
 
       await Promise.all([
         invalidateAllRecruiterCandidateSnapshots(),
-        invalidateRecruiterCandidateBriefsForStudent(profile._id.toString())
+        invalidateRecruiterCandidateBriefsForStudent(profile._id.toString()),
+        invalidateStudentReadCaches(req.user._id.toString())
       ]);
 
       uploadedResumeResponse = {
@@ -509,6 +516,7 @@ export async function compareResumeWithSkills(req, res) {
 
         profile.uploadedResume.extractedText = resumeText;
         await profile.save();
+        await invalidateStudentReadCaches(req.user._id.toString());
       } catch {
         return res.status(400).json({
           message: 'Unable to read your saved resume. Please upload the PDF again.'

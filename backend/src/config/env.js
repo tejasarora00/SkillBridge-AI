@@ -12,5 +12,7 @@ export const env = {
   redisUrl: process.env.REDIS_URL || '',
   cacheDefaultTtlSeconds: Number(process.env.CACHE_DEFAULT_TTL_SECONDS || 300),
   recruiterCandidateSnapshotTtlSeconds: Number(process.env.RECRUITER_CANDIDATE_SNAPSHOT_TTL_SECONDS || 180),
-  recruiterCandidateBriefTtlSeconds: Number(process.env.RECRUITER_CANDIDATE_BRIEF_TTL_SECONDS || 900)
+  recruiterCandidateBriefTtlSeconds: Number(process.env.RECRUITER_CANDIDATE_BRIEF_TTL_SECONDS || 900),
+  studentProfileTtlSeconds: Number(process.env.STUDENT_PROFILE_TTL_SECONDS || 300),
+  studentDashboardTtlSeconds: Number(process.env.STUDENT_DASHBOARD_TTL_SECONDS || 120)
 };
