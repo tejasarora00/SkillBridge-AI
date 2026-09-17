@@ -1,4 +1,4 @@
-import { CandidateMatch, JobPosting, Roadmap, SkillTaskSubmission, StudentProfile } from '../models/index.js';
+import { CandidateMatch, JobPosting, Roadmap, SkillQuizAttempt, SkillTaskSubmission, StudentProfile } from '../models/index.js';
 import { PDFParse } from 'pdf-parse';
 import {
   evaluateInterviewAnswers,
@@ -8,6 +8,7 @@ import {
   getAiStatus,
   getVerifiedAiStatus,
   generateInterviewQuestions,
+  generateSkillQuiz,
   generateRoadmap,
   refineRoadmap,
   suggestTaskCategories
@@ -383,10 +384,10 @@ export async function refineStudentRoadmap(req, res) {
 
 export async function submitSkillTask(req, res) {
   try {
-    const { skillCategory, taskPrompt, userSubmission } = req.body;
+    const { quizId, answers } = req.body;
 
-    if (!skillCategory || !taskPrompt || !userSubmission) {
-      return res.status(400).json({ message: 'Skill, task prompt, and submission are required.' });
+    if (!quizId || !Array.isArray(answers)) {
+      return res.status(400).json({ message: 'Quiz answers are required.' });
     }
 
     const profile = await StudentProfile.findOne({ userId: req.user._id });
@@ -394,20 +395,30 @@ export async function submitSkillTask(req, res) {
       return res.status(404).json({ message: 'Student profile not found.' });
     }
 
-    const evaluation = await evaluateSkillSubmission(
-      {
-        skillCategory: String(skillCategory).trim(),
-        taskPrompt: String(taskPrompt).trim(),
-        userSubmission
+    const attempt = await SkillQuizAttempt.findOne({ _id: quizId, studentProfileId: profile._id });
+    if (!attempt) return res.status(404).json({ message: 'Quiz not found. Generate a new quiz and try again.' });
+    if (attempt.completedAt) return res.status(400).json({ message: 'This quiz has already been submitted.' });
+    if (answers.length !== attempt.questions.length) return res.status(400).json({ message: 'Answer every question before submitting.' });
+
+    const correctAnswers = attempt.questions.reduce((total, question, index) =>
+      total + (Number(answers[index]) === question.correctOption ? 1 : 0), 0);
+    const score = Math.round((correctAnswers / attempt.questions.length) * 100);
+    const evaluation = {
+      data: {
+        score,
+        strengths: score >= 80 ? ['Strong command of the selected skill.', 'Accurate answers across the assessment.'] : ['Completed a verified skill assessment.'],
+        weaknesses: score >= 80 ? [] : ['Review the concepts behind the questions you missed.'],
+        suggestions: score >= 80 ? ['Keep practising with a new question set to reinforce your knowledge.'] : ['Retry the assessment after revising the skill fundamentals.']
       },
-      profile.toObject()
-    );
+      meta: { mode: 'quiz', available: true, message: '' }
+    };
+    await SkillQuizAttempt.updateOne({ _id: attempt._id }, { answers: answers.map(Number), completedAt: new Date() });
 
     const submission = await SkillTaskSubmission.create({
       studentProfileId: profile._id,
-      skillCategory: String(skillCategory).trim(),
-      taskPrompt: String(taskPrompt).trim(),
-      userSubmission,
+      skillCategory: attempt.skillCategory,
+      taskPrompt: `${attempt.questionCount}-question MCQ assessment`,
+      userSubmission: `${correctAnswers} of ${attempt.questions.length} questions answered correctly.`,
       aiScore: evaluation.data.score,
       strengths: evaluation.data.strengths || [],
       weaknesses: evaluation.data.weaknesses || [],
@@ -445,6 +456,32 @@ export async function submitSkillTask(req, res) {
     return res.json({ submission, aiStatus: evaluation.meta });
   } catch {
     return res.status(500).json({ message: 'Unable to evaluate skill task submission.' });
+  }
+}
+
+export async function createSkillQuiz(req, res) {
+  try {
+    const skillCategory = String(req.body?.skillCategory || '').trim();
+    const requestedCount = String(req.body?.questionCount || '').trim();
+    const allowedCounts = [5, 10, 15, 20];
+    const questionCount = requestedCount === 'random' ? Math.floor(Math.random() * 16) + 5 : Number(requestedCount);
+    if (!skillCategory || (!allowedCounts.includes(questionCount) && requestedCount !== 'random')) {
+      return res.status(400).json({ message: 'Choose a skill and a valid number of questions.' });
+    }
+    const profile = await StudentProfile.findOne({ userId: req.user._id });
+    if (!profile) return res.status(404).json({ message: 'Student profile not found.' });
+    const quiz = await generateSkillQuiz(profile.toObject(), skillCategory, questionCount);
+    const attempt = await SkillQuizAttempt.create({ studentProfileId: profile._id, skillCategory, questionCount, questions: quiz.data.questions });
+    return res.json({
+      quizId: attempt._id,
+      skillCategory,
+      questionCount,
+      questions: quiz.data.questions.map(({ question, options }) => ({ question, options })),
+      aiStatus: quiz.meta
+    });
+  } catch (error) {
+    console.error('Skill quiz generation failed:', error.message);
+    return res.status(500).json({ message: 'Unable to generate the skill quiz.' });
   }
 }
 

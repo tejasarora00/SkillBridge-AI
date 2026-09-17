@@ -272,6 +272,47 @@ function validateSkillTaskPrompt(result, skillName, fallbackPrompt) {
   };
 }
 
+function makeFallbackQuiz(skillName, questionCount) {
+  const skill = String(skillName || 'this skill').trim();
+  const stems = [
+    `Which approach is most likely to produce maintainable ${skill} work?`,
+    `What should you do first when solving a ${skill} problem with unclear requirements?`,
+    `Which practice best helps you verify a ${skill} solution works correctly?`,
+    `When improving a ${skill} project, what is the most useful next step?`,
+    `Which outcome demonstrates sound ${skill} understanding?`
+  ];
+  const correct = [
+    'Use clear structure, small focused pieces, and meaningful names.',
+    'Clarify the goal, constraints, and success criteria.',
+    'Test the expected behaviour and important edge cases.',
+    'Measure the issue, make one focused change, then verify it.',
+    'Explain the trade-offs and deliver a solution that meets the requirements.'
+  ];
+  const distractors = [
+    'Start changing things immediately without a plan.',
+    'Choose the shortest-looking answer without checking it.',
+    'Avoid testing so the work can be finished faster.'
+  ];
+  return Array.from({ length: questionCount }, (_, index) => {
+    const correctOption = index % 4;
+    const options = [...distractors];
+    options.splice(correctOption, 0, correct[index % correct.length]);
+    return { question: stems[index % stems.length], options, correctOption };
+  });
+}
+
+function validateSkillQuiz(result, skillName, questionCount) {
+  const fallback = makeFallbackQuiz(skillName, questionCount);
+  const valid = (Array.isArray(result?.questions) ? result.questions : [])
+    .map((item) => ({
+      question: String(item?.question || '').trim(),
+      options: Array.isArray(item?.options) ? item.options.map((option) => String(option || '').trim()).filter(Boolean).slice(0, 4) : [],
+      correctOption: Number(item?.correctOption)
+    }))
+    .filter((item) => item.question && item.options.length === 4 && item.correctOption >= 0 && item.correctOption < 4);
+  return valid.length === questionCount ? valid : fallback;
+}
+
 function validateEmailDraft(result, fallback) {
   return {
     subject: String(result?.subject || '').trim() || fallback.subject,
@@ -1062,6 +1103,30 @@ ${JSON.stringify(compactProfile, null, 2)}
     data: validateSkillTaskPrompt(payload, normalizedSkill, fallback.taskPrompt),
     meta
   };
+}
+
+export async function generateSkillQuiz(profile, skillName, questionCount) {
+  const normalizedSkill = String(skillName || '').trim() || 'core skill';
+  const count = Math.max(5, Math.min(20, Number(questionCount) || 5));
+  const fallback = { questions: makeFallbackQuiz(normalizedSkill, count) };
+  const compactProfile = compactProfileForAi(profile);
+  const prompt = `
+Return valid JSON only with this exact shape:
+{
+  "questions": [
+    { "question": "string", "options": ["string", "string", "string", "string"], "correctOption": 0 }
+  ]
+}
+
+Create exactly ${count} distinct, fair multiple-choice questions to assess ${normalizedSkill}.
+Each question must have exactly four plausible options and a zero-based correctOption from 0 to 3.
+Test practical concepts and fundamentals. Do not use trick questions, 'all of the above', or options that reveal the answer.
+
+Student profile:
+${JSON.stringify(compactProfile, null, 2)}
+`.trim();
+  const { payload, meta } = await requestStructuredResponse(prompt, fallback);
+  return { data: validateSkillQuiz(payload, normalizedSkill, count), meta };
 }
 
 export async function generateExpertSessionEmailDraft({ expertEmail, request, studentProfile }) {

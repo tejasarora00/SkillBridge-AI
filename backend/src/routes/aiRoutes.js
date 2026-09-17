@@ -6,6 +6,7 @@ import {
   evaluateMockInterview,
   getUploadedResume,
   getAiRuntimeStatus,
+  createSkillQuiz,
   listTaskCategories,
   refineStudentRoadmap,
   startMockInterview,
@@ -24,6 +25,7 @@ router.get('/status', getAiRuntimeStatus);
 router.post('/roadmap', createRoadmap);
 router.post('/roadmap/refine', refineStudentRoadmap);
 router.get('/skill-task-prompts', listTaskCategories);
+router.post('/skill-quiz', createSkillQuiz);
 router.post('/skill-task', submitSkillTask);
 router.post('/resume-comparison', upload.single('resumeFile'), compareResumeWithSkills);
 router.get('/resume-file', getUploadedResume);
