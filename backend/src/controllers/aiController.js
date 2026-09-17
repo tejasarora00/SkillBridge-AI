@@ -403,6 +403,15 @@ export async function submitSkillTask(req, res) {
     const correctAnswers = attempt.questions.reduce((total, question, index) =>
       total + (Number(answers[index]) === question.correctOption ? 1 : 0), 0);
     const score = Math.round((correctAnswers / attempt.questions.length) * 100);
+    const review = attempt.questions.map((question, index) => ({
+      question: question.question,
+      selectedOption: Number(answers[index]),
+      selectedAnswer: question.options[Number(answers[index])] || 'No answer',
+      correctOption: question.correctOption,
+      correctAnswer: question.options[question.correctOption],
+      isCorrect: Number(answers[index]) === question.correctOption,
+      explanation: question.explanation || `The correct answer is: ${question.options[question.correctOption]}`
+    }));
     const evaluation = {
       data: {
         score,
@@ -453,7 +462,7 @@ export async function submitSkillTask(req, res) {
       invalidateStudentReadCaches(req.user._id.toString())
     ]);
 
-    return res.json({ submission, aiStatus: evaluation.meta });
+    return res.json({ submission, review, aiStatus: evaluation.meta });
   } catch {
     return res.status(500).json({ message: 'Unable to evaluate skill task submission.' });
   }

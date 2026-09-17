@@ -297,7 +297,12 @@ function makeFallbackQuiz(skillName, questionCount) {
     const correctOption = index % 4;
     const options = [...distractors];
     options.splice(correctOption, 0, correct[index % correct.length]);
-    return { question: stems[index % stems.length], options, correctOption };
+    return {
+      question: stems[index % stems.length],
+      options,
+      correctOption,
+      explanation: `This choice reflects a reliable ${skill} workflow: understand the goal, use a deliberate approach, and verify the result.`
+    };
   });
 }
 
@@ -307,9 +312,10 @@ function validateSkillQuiz(result, skillName, questionCount) {
     .map((item) => ({
       question: String(item?.question || '').trim(),
       options: Array.isArray(item?.options) ? item.options.map((option) => String(option || '').trim()).filter(Boolean).slice(0, 4) : [],
-      correctOption: Number(item?.correctOption)
+      correctOption: Number(item?.correctOption),
+      explanation: String(item?.explanation || '').trim()
     }))
-    .filter((item) => item.question && item.options.length === 4 && item.correctOption >= 0 && item.correctOption < 4);
+    .filter((item) => item.question && item.options.length === 4 && item.correctOption >= 0 && item.correctOption < 4 && item.explanation);
   return valid.length === questionCount ? valid : fallback;
 }
 
@@ -1114,12 +1120,13 @@ export async function generateSkillQuiz(profile, skillName, questionCount) {
 Return valid JSON only with this exact shape:
 {
   "questions": [
-    { "question": "string", "options": ["string", "string", "string", "string"], "correctOption": 0 }
+    { "question": "string", "options": ["string", "string", "string", "string"], "correctOption": 0, "explanation": "string" }
   ]
 }
 
 Create exactly ${count} distinct, fair multiple-choice questions to assess ${normalizedSkill}.
 Each question must have exactly four plausible options and a zero-based correctOption from 0 to 3.
+For every question, include a clear one- or two-sentence explanation of why the correct option is right.
 Test practical concepts and fundamentals. Do not use trick questions, 'all of the above', or options that reveal the answer.
 
 Student profile:
