@@ -1348,6 +1348,39 @@ button:disabled {
   accent-color: var(--primary);
 }
 
+.answer-review {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.answer-review h3 {
+  margin: 4px 0 0;
+}
+
+.review-card.correct {
+  border-color: rgba(41, 142, 91, 0.42);
+  background: rgba(41, 142, 91, 0.07);
+}
+
+.review-card.incorrect {
+  border-color: rgba(196, 64, 64, 0.34);
+  background: rgba(196, 64, 64, 0.06);
+}
+
+.review-card p {
+  margin: 8px 0 0;
+}
+
+.review-status {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.review-card.incorrect .review-status {
+  color: #b73b3b;
+}
+
 .dashboard-hero {
   margin-bottom: 18px;
 }

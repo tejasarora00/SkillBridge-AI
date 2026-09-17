@@ -100,7 +100,7 @@ export function TaskSubmissionClient() {
         method: "POST",
         body: JSON.stringify({ quizId: quiz.quizId, answers }),
       });
-      setResult(data.submission);
+      setResult({ ...data.submission, review: data.review || [] });
       setMessage("Assessment submitted and scored.");
     } catch (error) {
       setMessage(error.message);
@@ -175,6 +175,18 @@ export function TaskSubmissionClient() {
             <article className="stat-card"><span>Assessment: </span><strong>{result.userSubmission}</strong></article>
             <article className="proof-card"><strong>Strengths</strong><div className="skill-badges">{(result.strengths || []).map((item) => <span key={item} className="badge">{item}</span>)}</div></article>
             <article className="proof-card"><strong>Next steps</strong><div className="skill-badges">{(result.suggestions || []).map((item) => <span key={item} className="badge subtle">{item}</span>)}</div></article>
+            <div className="answer-review">
+              <h3>Answer review</h3>
+              {(result.review || []).map((item, index) => (
+                <article className={`proof-card review-card ${item.isCorrect ? "correct" : "incorrect"}`} key={`${item.question}-${index}`}>
+                  <strong>{index + 1}. {item.question}</strong>
+                  <p className="review-status">{item.isCorrect ? "Correct" : "Incorrect"}</p>
+                  <p><b>Your answer:</b> {item.selectedAnswer}</p>
+                  {!item.isCorrect ? <p><b>Correct answer:</b> {item.correctAnswer}</p> : null}
+                  <p className="muted"><b>Why:</b> {item.explanation}</p>
+                </article>
+              ))}
+            </div>
           </div> : <p className="muted">Generate and complete an assessment to see your verified scorecard.</p>}
         </div>
       </section>
