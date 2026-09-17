@@ -1126,7 +1126,7 @@ Student profile:
 ${JSON.stringify(compactProfile, null, 2)}
 `.trim();
   const { payload, meta } = await requestStructuredResponse(prompt, fallback);
-  return { data: validateSkillQuiz(payload, normalizedSkill, count), meta };
+  return { data: { questions: validateSkillQuiz(payload, normalizedSkill, count) }, meta };
 }
 
 export async function generateExpertSessionEmailDraft({ expertEmail, request, studentProfile }) {
